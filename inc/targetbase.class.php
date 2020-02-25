@@ -647,6 +647,7 @@ PluginFormcreatorTargetInterface
    }
 
    protected function showDestinationEntitySetings($rand) {
+      global $DB;
       echo '<tr class="line1">';
       echo '<td width="15%">' . __('Destination entity') . '</td>';
       echo '<td width="25%">';
@@ -677,31 +678,54 @@ PluginFormcreatorTargetInterface
       echo '</div>';
 
       echo '<div id="entity_user_value" style="display: none">';
-      PluginFormcreatorQuestion::dropdownForForm(
-         $this->getForm()->getID(),
-         [
-            'fieldtype' => ['glpiselect'],
-            'values' => User::class,
+      // select all user questions (GLPI Object)
+      $questionTable = PluginFormcreatorQuestion::getTable();
+      $sectionTable = PluginFormcreatorSection::getTable();
+      $sectionFk = PluginFormcreatorSection::getForeignKeyField();
+      $formFk = PluginFormcreatorForm::getForeignKeyField();
+      $result = $DB->request([
+         'SELECT' => [
+            $questionTable => ['id', 'name', 'values'],
+            $sectionTable => ['name as sname'],
          ],
-         '_destination_entity_value_user',
-         [
-            'value' => $this->fields['destination_entity_value']
+         'FROM' => $questionTable,
+         'INNER JOIN' => [
+            $sectionTable => [
+               'FKEY' => [
+                  $sectionTable => 'id',
+                  $questionTable => $sectionFk
+               ]
+            ],
+         ],
+         'WHERE' => [
+            "$formFk" => $this->getForm()->getID(),
+            "$questionTable.fieldtype" => 'glpiselect'
          ]
-      );
+      ]);
+
+      $users_questions_user = [];
+      $users_questions_entity = [];
+
+      foreach ($result as $question) {
+         $decodedValues = json_decode($question['values'], JSON_OBJECT_AS_ARRAY);
+         if (isset($decodedValues['itemtype']) && $decodedValues['itemtype'] === 'User') {
+            $users_questions_user[$question['sname']][$question['id']] = $question['name'];
+         } elseif (isset($decodedValues['itemtype']) && $decodedValues['itemtype'] === 'Entity') {
+            $users_questions_entity[$question['sname']][$question['id']] = $question['name'];
+         }
+      }
+
+      Dropdown::showFromArray('_destination_entity_value_user', $users_questions_user, [
+         'value' => $this->fields['destination_entity_value'],
+      ]);
+
       echo '</div>';
 
       echo '<div id="entity_entity_value" style="display: none">';
-      PluginFormcreatorQuestion::dropdownForForm(
-         $this->getForm()->getID(),
-         [
-            'fieldtype' => ['glpiselect'],
-            'values' => Entity::class,
-         ],
-         '_destination_entity_value_entity',
-         [
-            'value' => $this->fields['destination_entity_value']
-         ]
-      );
+      Dropdown::showFromArray('_destination_entity_value_user', $users_questions_entity, [
+         'value' => $this->fields['destination_entity_value'],
+      ]);
+
       echo '</div>';
       echo '</td>';
       echo '</tr>';
@@ -1076,7 +1100,7 @@ SCRIPT;
             'OR' => [
                'AND' => [
                   'fieldtype' => ['glpiselect'],
-                  'values' => User::class,
+                  'values' => ['LIKE', '%User%'],
                ],
                [
                   'fieldtype' => ['email'],
@@ -1095,7 +1119,7 @@ SCRIPT;
          $this->getForm()->getID(),
          [
             'fieldtype' => ['glpiselect'],
-            'values' => Group::class,
+            'values' => ['LIKE', '%Group%'],
          ],
          'actor_value_question_person',
          [
@@ -1213,7 +1237,7 @@ SCRIPT;
             'OR' => [
                'AND' => [
                   'fieldtype' => ['glpiselect'],
-                  'values' => User::class,
+                  'values' => ['LIKE', '%User%'],
                ],
                [
                   'fieldtype' => ['email'],
@@ -1232,7 +1256,7 @@ SCRIPT;
          $this->getForm()->getID(),
          [
             'fieldtype' => ['glpiselect'],
-            'values' => Group::class,
+            'values' => ['LIKE', '%Group%'],
          ],
          'actor_value_' . PluginFormcreatorTarget_Actor::ACTOR_TYPE_QUESTION_GROUP,
          [
@@ -1357,7 +1381,7 @@ SCRIPT;
             'OR' => [
                'AND' => [
                   'fieldtype' => ['glpiselect'],
-                  'values' => User::class,
+                  'values' => ['LIKE', '%User%'],
                ],
                [
                   'fieldtype' => ['email'],
@@ -1376,7 +1400,7 @@ SCRIPT;
          $this->getForm()->getID(),
          [
             'fieldtype' => ['glpiselect'],
-            'values' => Group::class,
+            'values' => ['LIKE', '%Group%'],
          ],
          'actor_value_' . PluginFormcreatorTarget_Actor::ACTOR_TYPE_GROUP,
          [
@@ -1403,7 +1427,7 @@ SCRIPT;
          $this->getForm()->getID(),
          [
             'fieldtype' => ['glpiselect'],
-            'values' => Supplier::class,
+            'values' => ['LIKE', '%Supplier%'],
          ],
          'actor_value_' . PluginFormcreatorTarget_Actor::ACTOR_TYPE_QUESTION_SUPPLIER,
          [
