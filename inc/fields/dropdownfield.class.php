@@ -159,6 +159,13 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
 
                case User::class:
                   $dparams['right'] = 'all';
+                  if(intval($decodedValues['show_user_entity']) != 0) {
+                     $dparams['entity'] = intval($decodedValues['show_user_entity']);
+                  } elseif(intval($decodedValues['show_user_profile']) != 0) {
+                     $dparams['profiles_id'] = intval($decodedValues['show_user_profile']);
+                  } elseif(intval($decodedValues['show_user_group']) != 0) {
+                     $dparams['groups_id'] = intval($decodedValues['show_user_group']);
+                  }
                   break;
 
                case ITILCategory::class:
@@ -272,7 +279,26 @@ class PluginFormcreatorDropdownField extends PluginFormcreatorField
                   $dparams
                );
             } else {
-               $itemtype::dropdown($dparams);
+               if($itemtype == 'User') {
+                  $user[0] = "-----";
+                  $options = [
+                     'entities_id' => $dparams['entity']
+                  ];
+
+                  if(isset($dparams['profiles_id'])) {
+                     $options['profiles_id'] = $dparams['profiles_id'];
+                  } elseif(isset($dparams['groups_id'])) {
+                     $options['groups_id'] = $dparams['groups_id'];
+                  }
+
+                  foreach($users = $DB->request('glpi_users', $options) as $key => $values) {
+                     $user[$values['id']] = $values['realname']." ".$values['firstname'];
+                  }
+
+                  Dropdown::showFromArray($dparams['name'], $user);
+               } else {
+                  $itemtype::dropdown($dparams);
+               } 
             }
          }
          echo PHP_EOL;
