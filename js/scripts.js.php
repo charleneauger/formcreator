@@ -854,7 +854,34 @@ function plugin_formcreator_changeGlpiObjectItemType() {
       },
    }).done(function(response) {
       $('#dropdown_default_value_field').html(response);
+
+      $.ajax({
+         url: rootDoc + '/plugins/formcreator/ajax/dropdown_user_values.php',
+         type: 'GET',
+         data: {
+            dropdown_itemtype: glpi_object,
+            id: glpi_object_id
+         },
+      }).done(function(response) {
+         if(glpi_object == "User") {
+            $('#dropdown_user_entity_label').show();
+            $('#dropdown_user_profile_label').show();
+            $('#dropdown_user_group_label').show();
+         } else {
+            $('#dropdown_user_entity_label').hide();
+            $('#dropdown_user_profile_label').hide();
+            $('#dropdown_user_group_label').hide();
+         }
+         if(glpi_object == "User") {
+            var jsonArray = $.parseJSON(response);
+            $('#dropdown_user_entity_field').html(jsonArray.entity);
+            $('#dropdown_user_profile_field').html(jsonArray.profile);
+            $('#dropdown_user_group_field').html(jsonArray.group);
+         }
+         
+      });
    });
+
 }
 
 function plugin_formcreator_toggleCondition(field, itemtype) {
