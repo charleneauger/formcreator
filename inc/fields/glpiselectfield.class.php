@@ -75,8 +75,16 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
             Profile::class          => Profile::getTypeName(2)],
       ];
       array_unshift($optgroup, '---');
+
+      $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
+      if ($decodedValues === null) {
+         $itemtype = $this->question->fields['values'];
+      } else {
+         $itemtype = $decodedValues['itemtype'];
+      }
+
       $field = Dropdown::showFromArray('glpi_objects', $optgroup, [
-         'value'     => $this->question->fields['values'],
+         'value'     => $itemtype,
          'rand'      => $rand,
          'on_change' => 'plugin_formcreator_changeGlpiObjectItemType();',
          'display'   => false,
@@ -90,9 +98,30 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
       $additions .= '</td>';
       $additions .= '<td id="dropdown_default_value_field">';
       $additions .= '</td>';
-      $additions .= '<td></td>';
-      $additions .= '<td></td>';
+      $additions .= '<td id="dropdown_user_entity_label" style="display:none;">';
+      $additions .= '<label for="dropdown_user_entity'.$rand.'">';
+      $additions .= __('Entity');
+      $additions .= '</label>';
+      $additions .= '</td>';
+      $additions .= '<td id="dropdown_user_entity_field"></td>';
+      $additions .= '</tr><tr>';
+      $additions .= '<td id="dropdown_user_profile_label" style="display:none;">';
+      $additions .= '<label for="dropdown_user_profile'.$rand.'">';
+      $additions .= __('Profile');
+      $additions .= '</label>';
+      $additions .= '</td>';
+      $additions .= '<td id="dropdown_user_profile_field">';
+      $additions .= '</td>';
+      $additions .= '<td id="dropdown_user_group_label" style="display:none;">';
+      $additions .= '<label for="dropdown_user_group'.$rand.'">';
+      $additions .= __('Group');
+      $additions .= '</label>';
+      $additions .= '</td>';
+      $additions .= '<td id="dropdown_user_group_field">';
+      $additions .= '</td>';
       $additions .= '</tr>';
+      
+
       $additions .= Html::scriptBlock("plugin_formcreator_changeGlpiObjectItemType($rand);");
       return [
          'label' => $label,
@@ -116,7 +145,19 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
                   ERROR);
             return [];
          }
-         $input['values']         = $input['glpi_objects'];
+         //$input['values']         = $input['glpi_objects'];
+         $input['values'] = [
+            'itemtype' => $input['glpi_objects'],
+         ];
+
+         if ($input['glpi_objects'] == User::class) {
+            $input['values']['show_user_entity'] = $input['show_user_entity'];
+            $input['values']['show_user_profile'] = $input['show_user_profile'];
+            $input['values']['show_user_group'] = $input['show_user_group'];
+         }
+
+         $input['values'] = json_encode($input['values']);
+
          $this->value = isset($input['dropdown_default_value']) ? $input['dropdown_default_value'] : '';
       }
       return $input;
@@ -124,7 +165,13 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
 
    public function isValid() {
       // If the field is required it can't be empty (0 is a valid value for entity)
-      $itemtype = $this->question->fields['values'];
+      $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
+      if ($decodedValues === null) {
+         $itemtype = $this->question->fields['values'];
+      } else {
+         $itemtype = $decodedValues['itemtype'];
+      }
+
       $item = new $itemtype();
       if ($this->isRequired() && $item->isNewID($this->value)) {
          Session::addMessageAfterRedirect(
@@ -144,7 +191,14 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
 
    public function equals($value) {
       $value = html_entity_decode($value);
-      $itemtype = $this->question->fields['values'];
+
+      $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
+      if ($decodedValues === null) {
+         $itemtype = $this->question->fields['values'];
+      } else {
+         $itemtype = $decodedValues['itemtype'];
+      }
+
       $item = new $itemtype();
       if ($item->isNewId($this->value)) {
          return ($value === '');
@@ -161,7 +215,14 @@ class PluginFormcreatorGlpiselectField extends PluginFormcreatorDropdownField
 
    public function greaterThan($value) {
       $value = html_entity_decode($value);
-      $itemtype = $this->question->fields['values'];
+
+      $decodedValues = json_decode($this->question->fields['values'], JSON_OBJECT_AS_ARRAY);
+      if ($decodedValues === null) {
+         $itemtype = $this->question->fields['values'];
+      } else {
+         $itemtype = $decodedValues['itemtype'];
+      }
+
       $item = new $itemtype();
       if (!$item->getFromDB($this->value)) {
          throw new PluginFormcreatorComparisonException('Item not found for comparison');
